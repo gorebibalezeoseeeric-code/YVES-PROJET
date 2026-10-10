@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caisse+ — Gestion de tontine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;0,700;1,500&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest:#1B4332; --forest-dk:#12302B; --forest-lt:#2D5F4A;
+    --gold:#C9A227; --gold-lt:#E8D9A0; --gold-dk:#A5811C;
+    --brick:#B23A48; --brick-lt:#E05868;
+    --ink:#1F2A24;
+    --paper:#F8F5EC; --paper-dim:#EFEADD;
+    --line:#DFD7C1;
+    --white:#FFFFFF;
+    --text-soft:#6B6A5C;
+    --radius:14px;
+    --radius-sm:10px;
+    --shadow-sm:0 1px 2px rgba(31,42,36,0.06);
+    --shadow-md:0 4px 12px rgba(31,42,36,0.08);
+    --shadow-lg:0 20px 50px rgba(0,0,0,0.15);
+    --transition:all .2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Space Grotesk',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Newsreader',serif;letter-spacing:-0.01em;}
+  button{font-family:'Space Grotesk',sans-serif;cursor:pointer;}
+  input,select,textarea{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .hidden{display:none !important;}
+
+  /* ================ AUTH SCREENS ================ */
+  .auth-screen{
+    position:fixed;inset:0;z-index:1000;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg, var(--forest) 0%, var(--forest-dk) 100%);
+    padding:20px;
+  }
+  .auth-screen::before{
+    content:'';position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(201,162,39,0.15) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(201,162,39,0.1) 0%, transparent 40%);
+    pointer-events:none;
+  }
+  .auth-card{
+    position:relative;background:var(--white);
+    border-radius:20px;padding:36px 32px;
+    width:100%;max-width:420px;
+    box-shadow:0 30px 60px rgba(0,0,0,0.3);
+    animation:slideUp .4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+  .auth-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
+  .auth-brand .mark{width:44px;height:44px;border-radius:12px;background:var(--gold);color:var(--forest-dk);
+    display:flex;align-items:center;justify-content:center;font-family:'Newsreader',serif;font-weight:700;font-size:1.3rem;
+    box-shadow:0 4px 12px rgba(201,162,39,0.4);}
+  .auth-brand .name{font-family:'Newsreader',serif;font-weight:700;font-size:1.5rem;color:var(--forest);}
+  .auth-sub{text-align:center;color:var(--text-soft);font-size:0.85rem;margin-bottom:26px;}
+  .auth-tabs{display:flex;gap:6px;background:var(--paper-dim);border-radius:10px;padding:4px;margin-bottom:20px;}
+  .auth-tab{
+    flex:1;padding:9px;border:none;background:none;border-radius:7px;
+    font-size:0.82rem;font-weight:600;color:var(--text-soft);transition:var(--transition);
+  }
+  .auth-tab.active{background:var(--white);color:var(--forest);box-shadow:var(--shadow-sm);}
+  .auth-form .field{margin-bottom:14px;}
+  .auth-form .field label{display:block;font-size:0.76rem;color:var(--text-soft);margin-bottom:5px;font-weight:500;}
+  .auth-form .field input{
+    width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:0.9rem;outline:none;transition:var(--transition);background:var(--paper);
+  }
+  .auth-form .field input:focus{border-color:var(--gold);background:var(--white);}
+  .auth-error{
+    background:rgba(178,58,72,0.1);color:var(--brick);border:1px solid var(--brick);
+    padding:10px 14px;border-radius:9px;font-size:0.82rem;margin-bottom:14px;
+    animation:shake .3s;
+  }
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+  .auth-submit{
+    width:100%;padding:13px;border:none;border-radius:10px;
+    background:var(--gold);color:var(--forest-dk);font-weight:700;font-size:0.9rem;
+    transition:var(--transition);margin-top:6px;
+  }
+  .auth-submit:hover{background:var(--gold-dk);transform:translateY(-1px);box-shadow:0 6px 16px rgba(201,162,39,0.35);}
+  .auth-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+  .auth-foot{text-align:center;font-size:0.8rem;color:var(--text-soft);margin-top:18px;}
+  .auth-foot button{background:none;border:none;color:var(--forest);font-weight:600;text-decoration:underline;font-size:0.8rem;}
+
+  /* ================ SHELL ================ */
+  .shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+
+  /* ================ SIDEBAR ================ */
+  .sidebar{
+    background:var(--forest);color:#EDEBDD;padding:22px 16px;
+    position:sticky;top:0;height:100vh;overflow-y:auto;
+    display:flex;flex-direction:column;
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;padding-left:4px;}
+  .brand .mark{width:32px;height:32px;border-radius:9px;background:var(--gold);color:var(--forest-dk);
+    display:flex;align-items:center;justify-content:center;font-family:'Newsreader',serif;font-weight:700;font-size:1.1rem;
+    box-shadow:0 3px 8px rgba(201,162,39,0.3);}
+  .brand .name{font-family:'Newsreader',serif;font-weight:700;font-size:1.25rem;}
+  .brand-sub{font-size:0.7rem;color:rgba(237,235,221,0.55);padding-left:4px;margin-bottom:20px;word-break:break-word;}
+
+  .plan-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.05em;margin-bottom:14px;margin-left:4px;
+  }
+  .plan-badge.free{background:rgba(255,255,255,0.12);color:rgba(237,235,221,0.75);}
+  .plan-badge.pro{background:var(--gold);color:var(--forest-dk);}
+  .plan-badge.business{background:linear-gradient(90deg,var(--gold),#F0D77A);color:var(--forest-dk);}
+
+  .sidebar nav{flex:1;}
+  .sidebar nav .navlink{
+    display:flex;align-items:center;gap:12px;width:100%;
+    padding:11px 12px;border-radius:10px;margin-bottom:3px;
+    color:rgba(237,235,221,0.75);font-size:0.88rem;font-weight:500;
+    transition:var(--transition);
+    background:none;border:none;text-align:left;cursor:pointer;
+    position:relative;
+  }
+  .sidebar nav .navlink:hover{background:rgba(255,255,255,0.06);color:#fff;transform:translateX(2px);}
+  .sidebar nav .navlink.active{background:var(--gold);color:var(--forest-dk);font-weight:600;}
+  .sidebar nav .navlink.active::before{
+    content:'';position:absolute;left:-16px;top:50%;transform:translateY(-50%);
+    width:3px;height:20px;background:var(--gold);border-radius:0 3px 3px 0;
+  }
+  .sidebar nav .navlink .ic{width:20px;text-align:center;font-size:0.9rem;}
+
+  .caisse-mini{
+    margin-top:16px;padding:14px;border-radius:12px;
+    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  }
+  .caisse-mini .lbl{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;color:rgba(237,235,221,0.55);}
+  .caisse-mini .amt{font-family:'IBM Plex Mono',monospace;font-size:1.15rem;font-weight:600;color:var(--gold);margin-top:4px;word-break:break-all;}
+
+  .user-box{
+    margin-top:14px;padding:12px;border-radius:12px;
+    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+    display:flex;align-items:center;gap:10px;
+  }
+  .user-avatar{
+    width:38px;height:38px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg,var(--gold),var(--forest-lt));
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:0.85rem;overflow:hidden;
+  }
+  .user-avatar img{width:100%;height:100%;object-fit:cover;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:0.82rem;font-weight:600;color:rgba(237,235,221,0.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-email{font-size:0.68rem;color:rgba(237,235,221,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-logout{
+    background:none;border:none;color:rgba(237,235,221,0.6);
+    padding:4px;border-radius:6px;font-size:1rem;transition:var(--transition);
+  }
+  .user-logout:hover{color:var(--brick-lt);background:rgba(255,255,255,0.08);}
+
+  .sidebar-actions{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
+  .sidebar-actions button{
+    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+    color:rgba(237,235,221,0.85);padding:8px 12px;border-radius:8px;font-size:0.75rem;
+    text-align:left;transition:var(--transition);display:flex;align-items:center;gap:8px;
+  }
+  .sidebar-actions button:hover{background:rgba(255,255,255,0.12);transform:translateX(2px);}
+  .sidebar-actions button.upgrade{
+    background:linear-gradient(90deg,var(--gold),#E8C750);color:var(--forest-dk);
+    border:none;font-weight:700;
+  }
+  .sidebar-actions button.upgrade:hover{background:linear-gradient(90deg,var(--gold-dk),var(--gold));}
+
+  /* ================ MAIN ================ */
+  main{padding:28px 36px;min-width:0;}
+  .topline{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+  .topline h1{font-size:1.7rem;font-weight:700;}
+  .topline p{color:var(--text-soft);font-size:0.88rem;margin-top:3px;}
+
+  .btn{
+    border:none;border-radius:10px;padding:10px 18px;font-size:0.85rem;font-weight:600;
+    background:var(--forest);color:#fff;transition:var(--transition);
+  }
+  .btn:hover{background:var(--forest-dk);transform:translateY(-1px);box-shadow:var(--shadow-md);}
+  .btn:active{transform:translateY(0);}
+  .btn.gold{background:var(--gold);color:var(--forest-dk);}
+  .btn.gold:hover{background:var(--gold-dk);}
+  .btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink);}
+  .btn.ghost:hover{background:var(--paper-dim);box-shadow:none;}
+  .btn.brick{background:none;border:1.5px solid var(--brick);color:var(--brick);}
+  .btn.brick:hover{background:rgba(178,58,72,0.08);box-shadow:none;}
+  .btn.sm{padding:6px 12px;font-size:0.76rem;border-radius:8px;}
+  .btn.icon{padding:6px 9px;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none !important;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+  /* Search input */
+  .search-input{
+    padding:9px 14px 9px 34px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:0.85rem;outline:none;background:var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B6A5C' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 12px center;
+    transition:var(--transition);
+  }
+  .search-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,0.15);}
+
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  .card{
+    background:var(--white);border-radius:var(--radius);padding:16px;
+    box-shadow:var(--shadow-sm);transition:var(--transition);
+    position:relative;overflow:hidden;
+  }
+  .card::after{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--gold),transparent);
+    opacity:0;transition:opacity .2s;
+  }
+  .card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+  .card:hover::after{opacity:1;}
+  .card .lbl{font-size:0.72rem;color:var(--text-soft);text-transform:uppercase;letter-spacing:0.05em;}
+  .card .val{font-family:'IBM Plex Mono',monospace;font-size:1.4rem;font-weight:600;margin-top:6px;word-break:break-all;}
+  .card .val.brick{color:var(--brick);}
+  .card .val.gold{color:var(--gold-dk);}
+
+  .panel{background:var(--white);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm);margin-bottom:20px;}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+  .panel-head h2{font-size:1.05rem;font-weight:600;}
+
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;
+     color:var(--text-soft);padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+  th:hover{color:var(--ink);}
+  td{padding:11px 10px;border-bottom:1px solid var(--line);font-size:0.87rem;}
+  tr:last-child td{border-bottom:none;}
+  tr.clickable{cursor:pointer;transition:background .12s;}
+  tr.clickable:hover{background:var(--paper-dim);}
+  td.mono{font-family:'IBM Plex Mono',monospace;}
+  td.actions{white-space:nowrap;}
+
+  .avatar-mini{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--forest));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Newsreader',serif;font-weight:600;font-size:0.78rem;
+    overflow:hidden;flex-shrink:0;}
+  .avatar-mini img{width:100%;height:100%;object-fit:cover;}
+  .row-name{display:flex;align-items:center;gap:10px;}
+
+  .stamp{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:0.68rem;
+    padding:3px 9px;border-radius:6px;letter-spacing:0.04em;transform:rotate(-2deg);
+  }
+  .stamp.paid{background:rgba(27,67,50,0.1);color:var(--forest);border:1.5px solid var(--forest);}
+  .stamp.late{background:rgba(178,58,72,0.1);color:var(--brick);border:1.5px solid var(--brick);}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .field label{display:block;font-size:0.76rem;color:var(--text-soft);margin-bottom:5px;font-weight:500;}
+  .field input,.field select{
+    width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;
+    font-size:0.87rem;outline:none;transition:var(--transition);background:var(--paper);
+  }
+  .field input:focus,.field select:focus{border-color:var(--gold);background:var(--white);}
+
+  .tab-section{display:none;animation:fadeIn .25s;}
+  .tab-section.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  /* ================ MODALS ================ */
+  .modal{
+    position:fixed;inset:0;background:rgba(18,48,43,0.65);display:none;
+    align-items:center;justify-content:center;z-index:100;padding:20px;
+    backdrop-filter:blur(4px);
+  }
+  .modal.open{display:flex;animation:fadeIn .2s;}
+  .modal-card{
+    background:var(--white);border-radius:16px;box-shadow:var(--shadow-lg);
+    max-height:90vh;overflow-y:auto;color:var(--ink);
+    animation:slideUp .3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ================ PRICING PAGE ================ */
+  .pricing-hero{text-align:center;margin-bottom:32px;}
+  .pricing-hero h1{font-size:2rem;font-weight:700;margin-bottom:8px;}
+  .pricing-hero p{color:var(--text-soft);font-size:0.95rem;}
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:24px;}
+  .plan-card{
+    background:var(--white);border-radius:18px;padding:28px 24px;
+    box-shadow:var(--shadow-sm);border:2px solid transparent;
+    transition:var(--transition);position:relative;
+    display:flex;flex-direction:column;
+  }
+  .plan-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+  .plan-card.featured{border-color:var(--gold);box-shadow:0 8px 24px rgba(201,162,39,0.2);}
+  .plan-card.featured::before{
+    content:'★ POPULAIRE';position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+    background:var(--gold);color:var(--forest-dk);
+    padding:5px 14px;border-radius:20px;font-size:0.68rem;font-weight:700;
+    letter-spacing:0.05em;
+  }
+  .plan-name{font-family:'Newsreader',serif;font-size:1.5rem;font-weight:700;margin-bottom:6px;}
+  .plan-desc{color:var(--text-soft);font-size:0.82rem;margin-bottom:18px;}
+  .plan-price{font-family:'IBM Plex Mono',monospace;font-size:2.2rem;font-weight:700;color:var(--forest);margin-bottom:4px;}
+  .plan-price span{font-size:0.85rem;color:var(--text-soft);font-weight:400;}
+  .plan-features{list-style:none;margin:20px 0;flex:1;}
+  .plan-features li{
+    padding:8px 0;font-size:0.88rem;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--paper-dim);
+  }
+  .plan-features li:last-child{border-bottom:none;}
+  .plan-features li::before{
+    content:'✓';color:var(--forest);font-weight:700;font-size:0.9rem;
+    width:20px;height:20px;border-radius:50%;background:rgba(27,67,50,0.1);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .plan-features li.muted::before{content:'—';color:var(--text-soft);background:var(--paper-dim);}
+  .plan-features li.muted{color:var(--text-soft);}
+  .plan-cta{
+    width:100%;padding:13px;border-radius:10px;border:none;
+    font-weight:700;font-size:0.9rem;transition:var(--transition);
+  }
+  .plan-cta.primary{background:var(--forest);color:#fff;}
+  .plan-cta.primary:hover{background:var(--forest-dk);}
+  .plan-cta.gold{background:var(--gold);color:var(--forest-dk);}
+  .plan-cta.gold:hover{background:var(--gold-dk);}
+  .plan-cta.current{background:var(--paper-dim);color:var(--text-soft);cursor:default;}
+  .plan-cta:disabled{cursor:not-allowed;}
+
+  /* ================ TOAST ================ */
+  .toast-wrap{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:2000;pointer-events:none;}
+  .toast{
+    background:var(--forest);color:#fff;padding:13px 20px;border-radius:11px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);font-size:0.86rem;min-width:240px;
+    animation:toastIn .3s cubic-bezier(0.4, 0, 0.2, 1);
+    display:flex;align-items:center;gap:11px;pointer-events:all;
+  }
+  .toast.success{background:var(--forest);}
+  .toast.error{background:var(--brick);}
+  .toast.info{background:#2C5F8A;}
+  .toast.gold{background:linear-gradient(90deg,var(--gold),#E8C750);color:var(--forest-dk);font-weight:600;}
+  @keyframes toastIn{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:none;}}
+  .toast .ic{font-size:1.1rem;}
+
+  /* ================ RECEIPT / PROFILE ================ */
+  .receipt{width:390px;padding:0;overflow:hidden;}
+  .receipt-top{background:var(--forest);color:#EDEBDD;padding:22px;text-align:center;}
+  .receipt-top .mark{font-family:'Newsreader',serif;font-weight:700;font-size:1.4rem;color:var(--gold);}
+  .receipt-top .sub{font-size:0.72rem;color:rgba(237,235,221,0.7);margin-top:2px;}
+  .receipt-body{padding:22px;}
+  .receipt-body .line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);font-size:0.85rem;gap:12px;}
+  .receipt-body .line:last-child{border-bottom:none;}
+  .receipt-body .line span:first-child{color:var(--text-soft);flex-shrink:0;}
+  .receipt-body .line span:last-child{text-align:right;word-break:break-word;}
+  .receipt-body .amt-big{text-align:center;padding:16px 0;}
+  .receipt-body .amt-big .n{font-family:'IBM Plex Mono',monospace;font-size:1.9rem;font-weight:700;color:var(--forest);}
+  .receipt-foot{padding:16px 20px;background:var(--paper-dim);display:flex;gap:10px;}
+  .receipt-foot button{flex:1;}
+  .perf{height:14px;background:radial-gradient(circle 7px at 20px 0, transparent 7px, var(--white) 7px) repeat-x;background-size:28px 14px;margin-top:-1px;}
+
+  .profile-card{width:460px;}
+  .profile-head{background:var(--forest);color:#EDEBDD;padding:24px;display:flex;gap:16px;align-items:center;}
+  .profile-head .ph-avatar{width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--gold);
+    display:flex;align-items:center;justify-content:center;font-family:'Newsreader',serif;font-weight:700;font-size:1.6rem;color:var(--forest-dk);flex-shrink:0;border:3px solid rgba(255,255,255,0.25);}
+  .profile-head .ph-avatar img{width:100%;height:100%;object-fit:cover;}
+  .profile-head h2{font-size:1.15rem;font-weight:700;}
+  .profile-head .sub{font-size:0.78rem;color:rgba(237,235,221,0.7);margin-top:3px;}
+  .profile-body{padding:20px 24px;}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+  .info-grid .it .lbl{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-soft);}
+  .info-grid .it .v{font-size:0.88rem;font-weight:500;margin-top:3px;word-break:break-word;}
+  .profile-body h3{font-size:0.9rem;font-weight:600;margin-bottom:10px;}
+  .profile-foot{padding:16px 24px;background:var(--paper-dim);display:flex;gap:10px;}
+  .profile-foot button{flex:1;}
+
+  .empty{text-align:center;color:var(--text-soft);padding:30px 10px;font-size:0.88rem;}
+
+  @media print{
+    body *{visibility:hidden;}
+    .receipt,.receipt *{visibility:visible;}
+    .receipt{position:fixed;top:40px;left:50%;transform:translateX(-50%);box-shadow:none;width:390px;}
+    .receipt-foot{display:none;}
+  }
+
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr;}
+    .sidebar{position:static;height:auto;}
+    .cards{grid-template-columns:1fr 1fr;}
+    .form-grid{grid-template-columns:1fr;}
+    .info-grid{grid-template-columns:1fr;}
+    .profile-card,.receipt{width:100%;}
+    .plans{grid-template-columns:1fr;}
+    main{padding:20px 16px;}
+    .topline h1{font-size:1.3rem;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================ AUTH SCREEN ================ -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="mark">C+</div>
+      <div class="name">Caisse+</div>
+    </div>
+    <p class="auth-sub">Gérez votre tontine comme un pro</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Connexion</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Inscription</button>
+    </div>
+
+    <div class="auth-error hidden" id="authError"></div>
+
+    <!-- LOGIN -->
+    <form class="auth-form" id="formLogin" onsubmit="handleLogin(event)">
+      <div class="field"><label>Email</label>
+        <input type="email" id="loginEmail" required placeholder="vous@exemple.com"></div>
+      <div class="field"><label>Mot de passe</label>
+        <input type="password" id="loginPassword" required placeholder="••••••••"></div>
+      <button type="submit" class="auth-submit" id="btnLogin">Se connecter</button>
+      <div class="auth-foot">
+        Pas de compte ? <button type="button" onclick="switchAuthTab('signup')">Créer un compte</button>
+      </div>
+    </form>
+
+    <!-- SIGNUP -->
+    <form class="auth-form hidden" id="formSignup" onsubmit="handleSignup(event)">
+      <div class="field"><label>Nom de votre tontine / organisation</label>
+        <input type="text" id="signupOrg" required placeholder="Ex: Les Bâtisseuses"></div>
+      <div class="field"><label>Votre nom complet</label>
+        <input type="text" id="signupName" required placeholder="Ex: Aya Kouassi"></div>
+      <div class="field"><label>Email</label>
+        <input type="email" id="signupEmail" required placeholder="vous@exemple.com"></div>
+      <div class="field"><label>Mot de passe (min. 6 caractères)</label>
+        <input type="password" id="signupPassword" required minlength="6" placeholder="••••••••"></div>
+      <button type="submit" class="auth-submit" id="btnSignup">Créer mon compte gratuit</button>
+      <div class="auth-foot">
+        Déjà inscrit ? <button type="button" onclick="switchAuthTab('login')">Se connecter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================ APP SHELL ================ -->
+<div class="shell hidden" id="appShell">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">C+</div><div class="name">Caisse+</div></div>
+    <div class="brand-sub" id="tontineNameSub">Tontine « Les Bâtisseuses »</div>
+    <div class="plan-badge free" id="planBadge">Plan Gratuit</div>
+
+    <nav id="nav">
+      <button type="button" class="navlink active" data-tab="dashboard"><span class="ic">◆</span>Tableau de bord</button>
+      <button type="button" class="navlink" data-tab="membres"><span class="ic">◆</span>Membres</button>
+      <button type="button" class="navlink" data-tab="cotisations"><span class="ic">◆</span>Cotisations</button>
+      <button type="button" class="navlink" data-tab="penalites"><span class="ic">◆</span>Pénalités</button>
+      <button type="button" class="navlink" data-tab="rapports"><span class="ic">◆</span>Rapports</button>
+      <button type="button" class="navlink" data-tab="abonnement"><span class="ic">◆</span>Abonnement</button>
+      <button type="button" class="navlink" data-tab="parametres"><span class="ic">◆</span>Paramètres</button>
+    </nav>
+
+    <div class="caisse-mini">
+      <div class="lbl">Caisse totale</div>
+      <div class="amt mono" id="caisseTotal">0 FCFA</div>
+    </div>
+
+    <div class="user-box">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Utilisateur</div>
+        <div class="user-email" id="userEmail">email@exemple.com</div>
+      </div>
+      <button class="user-logout" onclick="handleLogout()" title="Déconnexion">⏻</button>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="upgrade" onclick="switchTab('abonnement')">⭐ Passer au Pro</button>
+      <button onclick="exportJSON()">⭳ Sauvegarder (JSON)</button>
+      <button onclick="document.getElementById('importFile').click()">⭱ Restaurer</button>
+    </div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+  </aside>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section class="tab-section active" id="dashboard">
+      <div class="topline">
+        <div><h1>Tableau de bord</h1><p id="dashSub">Tontine « Les Bâtisseuses » — cycle mensuel</p></div>
+        <button class="btn gold" onclick="switchTab('cotisations')">+ Nouveau versement</button>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="lbl">Membres actifs</div><div class="val" id="cardMembres">0</div></div>
+        <div class="card"><div class="lbl">Caisse totale</div><div class="val mono" id="cardCaisse">0 FCFA</div></div>
+        <div class="card"><div class="lbl">En retard</div><div class="val brick" id="cardRetard">0</div></div>
+        <div class="card"><div class="lbl">Pénalités cumulées</div><div class="val gold mono" id="cardPenalites">0 FCFA</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Derniers versements</h2><span class="btn ghost sm" onclick="switchTab('cotisations')">Voir tout</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Membre</th><th>Date</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="recentBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MEMBRES -->
+    <section class="tab-section" id="membres">
+      <div class="topline"><div><h1>Membres</h1><p>Liste des participants à la tontine</p></div>
+        <div class="btn-row">
+          <input class="search-input" id="memberSearch" placeholder="Rechercher un membre…" oninput="renderAll()">
+          <button class="btn gold" onclick="openMemberForm()">+ Ajouter un membre</button>
+        </div>
+      </div>
+      <div class="panel" id="memberForm" style="display:none;">
+        <h2 style="font-size:1rem;margin-bottom:14px;" id="memberFormTitle">Nouveau membre</h2>
+        <div class="photo-upload" style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+          <div class="preview" id="mPhotoPreview" style="width:64px;height:64px;border-radius:50%;background:var(--paper-dim);border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--text-soft);font-size:0.7rem;">Photo</div>
+          <div>
+            <input type="file" accept="image/*" id="mPhoto" onchange="previewPhoto()" style="font-size:0.8rem;">
+            <div style="font-size:0.7rem;color:var(--text-soft);margin-top:4px;">Photo d'identité (optionnel)</div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Nom complet</label><input id="mName" placeholder="Ex: Aya Kouassi"></div>
+          <div class="field"><label>Téléphone</label><input id="mPhone" placeholder="Ex: 07 00 00 00 00"></div>
+          <div class="field"><label>Adresse / Quartier</label><input id="mAddress" placeholder="Ex: Cocody, Angré"></div>
+          <div class="field"><label>Profession</label><input id="mProfession" placeholder="Ex: Commerçante"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="saveMember()">Enregistrer</button>
+          <button class="btn ghost" onclick="closeMemberForm()">Annuler</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Membre</th><th>Adresse</th><th>Profession</th><th>Total versé</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="membresBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- COTISATIONS -->
+    <section class="tab-section" id="cotisations">
+      <div class="topline"><div><h1>Cotisations</h1><p>Enregistrer et suivre les versements</p></div>
+        <button class="btn gold" onclick="toggleForm('cotisForm')">+ Nouveau versement</button></div>
+      <div class="panel" id="cotisForm" style="display:none;">
+        <div class="form-grid">
+          <div class="field"><label>Membre</label><select id="cMember"></select></div>
+          <div class="field"><label>Montant (FCFA)</label><input id="cMontant" type="number" placeholder="10000"></div>
+          <div class="field"><label>Date du versement</label><input id="cDate" type="date"></div>
+          <div class="field"><label>Statut</label>
+            <select id="cStatut"><option value="paid">À jour</option><option value="late">En retard</option></select>
+          </div>
+        </div>
+        <button class="btn" onclick="addCotisation()">Enregistrer le versement</button>
+      </div>
+      <div class="panel">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Membre</th><th>Date</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="cotisBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PENALITES -->
+    <section class="tab-section" id="penalites">
+      <div class="topline"><div><h1>Pénalités</h1><p>Retards constatés et pénalités appliquées</p></div></div>
+      <div class="cards" style="grid-template-columns:1fr 1fr;">
+        <div class="card"><div class="lbl">Taux actuel</div><div class="val mono" id="penTauxDisplay">0 FCFA</div></div>
+        <div class="card"><div class="lbl">Pénalités cumulées</div><div class="val brick mono" id="penTotalDisplay">0 FCFA</div></div>
+      </div>
+      <div class="panel">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Membre</th><th>Date du retard</th><th>Pénalité</th></tr></thead>
+            <tbody id="penBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- RAPPORTS -->
+    <section class="tab-section" id="rapports">
+      <div class="topline"><div><h1>Rapports financiers</h1><p>Synthèse de la caisse</p></div>
+        <div class="btn-row">
+          <button class="btn ghost" onclick="exportCSV()">⭳ CSV</button>
+          <button class="btn ghost" onclick="window.print()">🖨 Imprimer</button>
+        </div>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="lbl">Total collecté</div><div class="val mono" id="repTotal">0 FCFA</div></div>
+        <div class="card"><div class="lbl">Total pénalités</div><div class="val gold mono" id="repPen">0 FCFA</div></div>
+        <div class="card"><div class="lbl">Versements</div><div class="val" id="repCount">0</div></div>
+        <div class="card"><div class="lbl">Ponctualité</div><div class="val" id="repTaux">0%</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Solde par membre</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Membre</th><th>Total versé</th><th>Pénalités</th><th>Retards</th></tr></thead>
+            <tbody id="rapBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABONNEMENT -->
+    <section class="tab-section" id="abonnement">
+      <div class="topline"><div><h1>Abonnement</h1><p>Choisissez le plan adapté à votre tontine</p></div></div>
+
+      <div class="panel" style="background:linear-gradient(135deg,var(--forest),var(--forest-dk));color:#EDEBDD;border:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:rgba(237,235,221,0.6);">Plan actuel</div>
+            <div style="font-family:'Newsreader',serif;font-size:1.6rem;font-weight:700;margin-top:4px;" id="currentPlanName">Gratuit</div>
+            <div style="font-size:0.82rem;color:rgba(237,235,221,0.7);margin-top:4px;" id="currentPlanDesc">1 tontine, jusqu'à 10 membres</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:rgba(237,235,221,0.6);">Renouvellement</div>
+            <div style="font-size:0.95rem;font-weight:600;margin-top:4px;" id="currentPlanRenew">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pricing-hero" style="margin-top:32px;">
+        <h2 style="font-size:1.5rem;">Changez de plan à tout moment</h2>
+        <p>Annulation possible, sans engagement.</p>
+      </div>
+
+      <div class="plans" id="plansGrid"></div>
+
+      <p style="text-align:center;font-size:0.78rem;color:var(--text-soft);margin-top:20px;">
+        💡 Paiement par Orange Money, MTN MoMo, Wave ou carte bancaire — bientôt disponible.
+      </p>
+    </section>
+
+    <!-- PARAMETRES -->
+    <section class="tab-section" id="parametres">
+      <div class="topline"><div><h1>Paramètres</h1><p>Configuration générale</p></div></div>
+      <div class="panel">
+        <div class="form-grid">
+          <div class="field"><label>Nom de la tontine</label><input id="pName" value="Les Bâtisseuses"></div>
+          <div class="field"><label>Fréquence</label>
+            <select id="pFreq">
+              <option value="hebdo">Hebdomadaire</option>
+              <option value="mensuel" selected>Mensuelle</option>
+              <option value="trimestriel">Trimestrielle</option>
+            </select>
+          </div>
+          <div class="field"><label>Montant standard (FCFA)</label><input id="pMontantStd" type="number" value="10000"></div>
+          <div class="field"><label>Jour d'échéance</label><input id="pJourEcheance" value="5 de chaque mois"></div>
+          <div class="field"><label>Pénalité par retard (FCFA)</label><input id="pPenTaux" type="number" value="1000"></div>
+          <div class="field"><label>Responsable</label><input id="pResponsable" placeholder="Nom du trésorier"></div>
+        </div>
+        <button class="btn" onclick="saveSettings()">Enregistrer les paramètres</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- RECEIPT MODAL -->
+<div class="modal" id="receiptModal">
+  <div class="modal-card receipt">
+    <div class="receipt-top"><div class="mark">Caisse+</div><div class="sub" id="rTontineName"></div></div>
+    <div class="receipt-body">
+      <div class="line"><span>Reçu n°</span><span id="rReceipt" class="mono"></span></div>
+      <div class="line"><span>Membre</span><span id="rMember" class="mono"></span></div>
+      <div class="line"><span>Date</span><span id="rDate" class="mono"></span></div>
+      <div class="line"><span>Statut</span><span id="rStatut" class="mono"></span></div>
+      <div class="amt-big"><div class="n mono" id="rMontant"></div><div style="font-size:0.72rem;color:var(--text-soft);">Montant versé</div></div>
+    </div>
+    <div class="perf"></div>
+    <div class="receipt-foot">
+      <button class="btn ghost" onclick="closeModal('receiptModal')">Fermer</button>
+      <button class="btn gold" onclick="window.print()">Imprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER PROFILE MODAL -->
+<div class="modal" id="profileModal">
+  <div class="modal-card profile-card">
+    <div class="profile-head">
+      <div class="ph-avatar" id="pfAvatar"></div>
+      <div><h2 id="pfName"></h2><div class="sub" id="pfProfession"></div></div>
+    </div>
+    <div class="profile-body">
+      <div class="info-grid">
+        <div class="it"><div class="lbl">Téléphone</div><div class="v" id="pfPhone"></div></div>
+        <div class="it"><div class="lbl">Adresse</div><div class="v" id="pfAddress"></div></div>
+        <div class="it"><div class="lbl">Adhésion</div><div class="v" id="pfJoined"></div></div>
+        <div class="it"><div class="lbl">Total versé</div><div class="v mono" id="pfTotal"></div></div>
+      </div>
+      <h3>Historique des versements</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Montant</th><th>Statut</th></tr></thead>
+          <tbody id="pfHistory"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="profile-foot">
+      <button class="btn ghost" onclick="closeModal('profileModal')">Fermer</button>
+      <button class="btn" onclick="editMemberFromProfile()">Modifier</button>
+      <button class="btn brick" onclick="deleteMemberFromProfile()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal" id="checkoutModal">
+  <div class="modal-card" style="width:440px;padding:32px;text-align:center;">
+    <div style="font-family:'Newsreader',serif;font-size:1.5rem;font-weight:700;margin-bottom:6px;">Confirmer l'abonnement</div>
+    <p style="color:var(--text-soft);font-size:0.88rem;margin-bottom:22px;">Vous allez souscrire au plan</p>
+    <div style="font-family:'Newsreader',serif;font-size:2rem;font-weight:700;color:var(--gold-dk);margin-bottom:4px;" id="checkoutPlan"></div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:1.6rem;font-weight:700;color:var(--forest);margin-bottom:22px;" id="checkoutPrice"></div>
+    <div style="background:var(--paper-dim);padding:14px;border-radius:10px;font-size:0.78rem;color:var(--text-soft);margin-bottom:22px;text-align:left;">
+      🔒 <b>Démo</b> — Aucun paiement réel ne sera effectué. En production, vous serez redirigé vers Orange Money, MTN MoMo, Wave ou Stripe.
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn ghost" style="flex:1;" onclick="closeModal('checkoutModal')">Annuler</button>
+      <button class="btn gold" style="flex:1;" onclick="confirmCheckout()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST WRAP -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =====================================================
+   CONSTANTES
+===================================================== */
+const STORAGE_KEYS = {
+  USERS:'caisseplus_users_v1',
+  SESSION:'caisseplus_session_v1',
+  DATA:'caisseplus_data_v1'
+};
+const PLANS = {
+  free:     { name:'Gratuit',  price:0,     desc:'1 tontine, jusqu\'à 10 membres', maxMembers:10,   features:['1 tontine','10 membres max','Versements illimités','Reçus imprimables','Support communauté'] },
+  pro:      { name:'Pro',      price:5000,  desc:'5 tontines, 100 membres, rappels', maxMembers:100,  features:['5 tontines','100 membres','Rappels SMS','Exports avancés','Multi-admins','Support prioritaire'] },
+  business: { name:'Business', price:15000, desc:'Illimité + marque blanche', maxMembers:Infinity, features:['Tontines illimitées','Membres illimités','Marque blanche','API & intégrations','Support dédié','Formation incluse'] }
+};
+
+/* =====================================================
+   STATE
+===================================================== */
+let currentUser = null;      // {id, name, email, org, plan, createdAt, renewAt}
+let members = [];
+let cotisations = [];
+let settings = { name:"Ma tontine", freq:"mensuel", montantStd:10000, jourEcheance:"5 de chaque mois", penTaux:1000, responsable:"" };
+let nextMemberId = 1, nextCotisId = 1;
+let editingMemberId = null;
+let activeProfileId = null;
+let currentPhotoData = null;
+let pendingPlanId = null;
+
+/* =====================================================
+   UTILS
+===================================================== */
+function fmt(n){ return Number(n||0).toLocaleString('fr-FR') + " FCFA"; }
+function memberName(id){ const m = members.find(x=>x.id===id); return m ? m.name : "—"; }
+function initials(name){ return (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function avatarHTML(m){ if(!m) return '?'; return m.photo ? `<img src="${m.photo}">` : initials(m.name); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function genReceiptNo(){ return 'C+' + Date.now().toString(36).toUpperCase().slice(-6) + Math.floor(Math.random()*100); }
+function reload(ms=1500){ /* noop, placeholder */ }
+
+/* =====================================================
+   TOASTS
+===================================================== */
+function toast(msg, type='success', duration=2800){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const icons = { success:'✓', error:'✕', info:'ℹ', gold:'★' };
+  el.innerHTML = `<span class="ic">${icons[type]||'•'}</span><span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(30px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(),300); }, duration);
+}
+
+/* =====================================================
+   AUTH
+===================================================== */
+function switchAuthTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+  document.getElementById('formLogin').classList.toggle('hidden', tab!=='login');
+  document.getElementById('formSignup').classList.toggle('hidden', tab!=='signup');
+  hideAuthError();
+}
+function showAuthError(msg){ const el=document.getElementById('authError'); el.textContent=msg; el.classList.remove('hidden'); }
+function hideAuthError(){ document.getElementById('authError').classList.add('hidden'); }
+
+function getUsers(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS)||'[]'); }catch(e){ return []; } }
+function saveUsers(u){ localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(u)); }
+function saveSession(user){ localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(user)); }
+function getSession(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSION)||'null'); }catch(e){ return null; } }
+function clearSession(){ localStorage.removeItem(STORAGE_KEYS.SESSION); }
+
+function handleSignup(e){
+  e.preventDefault(); hideAuthError();
+  const org = document.getElementById('signupOrg').value.trim();
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+  const password = document.getElementById('signupPassword').value;
+  if(!org || !name || !email || password.length<6) return showAuthError('Veuillez remplir correctement tous les champs.');
+
+  const users = getUsers();
+  if(users.find(u=>u.email===email)) return showAuthError('Un compte existe déjà avec cet email.');
+
+  const user = {
+    id: uid(), name, email, org,
+    password, // ⚠️ démo uniquement — en production, hash côté serveur
+    plan:'free', createdAt: new Date().toISOString(),
+    renewAt: null
+  };
+  users.push(user); saveUsers(users);
+  currentUser = user; saveSession(user);
+  toast(`Bienvenue ${name} ! Votre compte est créé.`, 'gold', 3500);
+  startApp();
+}
+
+function handleLogin(e){
+  e.preventDefault(); hideAuthError();
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  const users = getUsers();
+  const user = users.find(u=>u.email===email && u.password===password);
+  if(!user) return showAuthError('Email ou mot de passe incorrect.');
+  currentUser = user; saveSession(user);
+  toast(`Content de vous revoir, ${user.name.split(' ')[0]} !`, 'success');
+  startApp();
+}
+
+function handleLogout(){
+  if(!confirm('Se déconnecter ?')) return;
+  clearSession();
+  currentUser = null;
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('formLogin').reset();
+  toast('Vous êtes déconnecté.', 'info');
+}
+
+function startApp(){
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appShell').classList.remove('hidden');
+  loadUserData();
+  refreshUserUI();
+  renderPlans();
+  renderAll();
+}
+
+function loadUserData(){
+  const key = STORAGE_KEYS.DATA + '_' + currentUser.id;
+  try{
+    const raw = localStorage.getItem(key);
+    if(raw){
+      const d = JSON.parse(raw);
+      members = d.members || [];
+      cotisations = d.cotisations || [];
+      settings = Object.assign(settings, d.settings || {});
+      nextMemberId = d.nextMemberId || 1;
+      nextCotisId = d.nextCotisId || 1;
+    } else {
+      // données de démo pour le nouveau compte
+      members = [
+        {id:1, name:"Aya Kouassi", phone:"07 01 23 45 67", address:"Cocody, Angré", profession:"Commerçante", photo:null, joined:new Date().toISOString().slice(0,10)},
+        {id:2, name:"Marc Yao", phone:"05 04 55 66 77", address:"Yopougon, Selmer", profession:"Enseignant", photo:null, joined:new Date().toISOString().slice(0,10)},
+      ];
+      cotisations = [
+        {id:1, memberId:1, montant:10000, date:new Date().toISOString().slice(0,10), statut:"paid", receiptNo:genReceiptNo()},
+        {id:2, memberId:2, montant:10000, date:new Date().toISOString().slice(0,10), statut:"paid", receiptNo:genReceiptNo()},
+      ];
+      settings.name = currentUser.org || 'Ma tontine';
+      nextMemberId = 3; nextCotisId = 3;
+      persist();
+    }
+  }catch(e){ console.warn('load error', e); }
+}
+
+function persist(){
+  if(!currentUser) return;
+  const key = STORAGE_KEYS.DATA + '_' + currentUser.id;
+  localStorage.setItem(key, JSON.stringify({ members, cotisations, settings, nextMemberId, nextCotisId }));
+  // aussi : mise à jour de l'utilisateur (plan) dans la liste
+  const users = getUsers();
+  const idx = users.findIndex(u=>u.id===currentUser.id);
+  if(idx>=0){ users[idx] = currentUser; saveUsers(users); saveSession(currentUser); }
+}
+
+function refreshUserUI(){
+  document.getElementById('userName').textContent = currentUser.name;
+  document.getElementById('userEmail').textContent = currentUser.email;
+  document.getElementById('userAvatar').innerHTML = initials(currentUser.name);
+  document.getElementById('tontineNameSub').textContent = `Tontine « ${settings.name} »`;
+
+  const plan = PLANS[currentUser.plan] || PLANS.free;
+  const badge = document.getElementById('planBadge');
+  badge.className = 'plan-badge ' + currentUser.plan;
+  badge.textContent = 'Plan ' + plan.name;
+
+  // remplir le formulaire paramètres
+  document.getElementById('pName').value = settings.name;
+  document.getElementById('pFreq').value = settings.freq;
+  document.getElementById('pMontantStd').value = settings.montantStd;
+  document.getElementById('pJourEcheance').value = settings.jourEcheance;
+  document.getElementById('pPenTaux').value = settings.penTaux;
+  document.getElementById('pResponsable').value = settings.responsable || '';
+
+  // onglet abonnement
+  document.getElementById('currentPlanName').textContent = plan.name;
+  document.getElementById('currentPlanDesc').textContent = plan.desc;
+  document.getElementById('currentPlanRenew').textContent = currentUser.plan==='free' ? 'Gratuit à vie' : (currentUser.renewAt ? new Date(currentUser.renewAt).toLocaleDateString('fr-FR') : '—');
+
+  // bouton upgrade : masquer si déjà business
+  const upgradeBtn = document.querySelector('.sidebar-actions .upgrade');
+  if(upgradeBtn) upgradeBtn.style.display = currentUser.plan==='business' ? 'none' : 'block';
+}
+
+/* =====================================================
+   PLANS & ABONNEMENT
+===================================================== */
+function renderPlans(){
+  const grid = document.getElementById('plansGrid');
+  grid.innerHTML = Object.entries(PLANS).map(([id,p])=>{
+    const isCurrent = currentUser.plan === id;
+    const isFeatured = id === 'pro';
+    return `
+      <div class="plan-card ${isFeatured?'featured':''}">
+        <div class="plan-name">${p.name}</div>
+        <div class="plan-desc">${p.desc}</div>
+        <div class="plan-price">${p.price===0?'Gratuit':fmt(p.price).replace(' FCFA','')}<span>${p.price===0?'':' FCFA/mois'}</span></div>
+        <ul class="plan-features">
+          ${p.features.map(f=>`<li>${f}</li>`).join('')}
+        </ul>
+        ${isCurrent
+          ? `<button class="plan-cta current" disabled>Plan actuel</button>`
+          : `<button class="plan-cta ${isFeatured?'gold':'primary'}" onclick="openCheckout('${id}')">Choisir ${p.name}</button>`}
+      </div>`;
+  }).join('');
+}
+
+function openCheckout(planId){
+  pendingPlanId = planId;
+  const p = PLANS[planId];
+  document.getElementById('checkoutPlan').textContent = 'Plan ' + p.name;
+  document.getElementById('checkoutPrice').textContent = p.price===0 ? 'Gratuit' : fmt(p.price) + ' / mois';
+  document.getElementById('checkoutModal').classList.add('open');
+}
+
+function confirmCheckout(){
+  if(!pendingPlanId) return;
+  const p = PLANS[pendingPlanId];
+  currentUser.plan = pendingPlanId;
+  if(p.price > 0){
+    const renew = new Date();
+    renew.setMonth(renew.getMonth()+1);
+    currentUser.renewAt = renew.toISOString();
+  } else {
+    currentUser.renewAt = null;
+  }
+  persist();
+  refreshUserUI();
+  renderPlans();
+  closeModal('checkoutModal');
+  toast(`🎉 Plan ${p.name} activé !`, 'gold', 3500);
+  pendingPlanId = null;
+}
+
+/* =====================================================
+   NAVIGATION
+===================================================== */
+function switchTab(tab){
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  document.querySelectorAll('#nav .navlink').forEach(a=>a.classList.toggle('active', a.dataset.tab===tab));
+  if(tab==='abonnement'){ refreshUserUI(); renderPlans(); }
+}
+document.getElementById('nav').addEventListener('click', e=>{
+  const a = e.target.closest('.navlink'); if(!a) return;
+  switchTab(a.dataset.tab);
+});
+
+function toggleForm(id){
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+/* =====================================================
+   MEMBRES
+===================================================== */
+function openMemberForm(){
+  // gating par plan
+  const max = PLANS[currentUser.plan].maxMembers;
+  if(!editingMemberId && members.length >= max){
+    toast(`Limite du plan ${PLANS[currentUser.plan].name} atteinte (${max} membres). Passez au plan supérieur.`, 'error', 4000);
+    switchTab('abonnement');
+    return;
+  }
+  editingMemberId = null; currentPhotoData = null;
+  document.getElementById('memberFormTitle').textContent = 'Nouveau membre';
+  ['mName','mPhone','mAddress','mProfession'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mPhoto').value='';
+  document.getElementById('mPhotoPreview').innerHTML = 'Photo';
+  document.getElementById('memberForm').style.display = 'block';
+}
+function closeMemberForm(){ document.getElementById('memberForm').style.display='none'; }
+
+function previewPhoto(){
+  const file = document.getElementById('mPhoto').files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    currentPhotoData = e.target.result;
+    document.getElementById('mPhotoPreview').innerHTML = `<img src="${currentPhotoData}" style="width:100%;height:100%;object-fit:cover;">`;
+  };
+  r.readAsDataURL(file);
+}
+
+function saveMember(){
+  const name = document.getElementById('mName').value.trim();
+  if(!name) return toast('Le nom est obligatoire.', 'error');
+  const data = {
+    name,
+    phone: document.getElementById('mPhone').value.trim(),
+    address: document.getElementById('mAddress').value.trim(),
+    profession: document.getElementById('mProfession').value.trim()
+  };
+  if(editingMemberId){
+    const m = members.find(x=>x.id===editingMemberId);
+    Object.assign(m, data);
+    if(currentPhotoData) m.photo = currentPhotoData;
+    toast('Membre modifié.', 'success');
+  } else {
+    members.push({ id:nextMemberId++, ...data, photo:currentPhotoData, joined:new Date().toISOString().slice(0,10) });
+    toast('Membre ajouté.', 'success');
+  }
+  closeMemberForm(); persist(); renderAll();
+}
+
+function editMember(id){
+  const m = members.find(x=>x.id===id); if(!m) return;
+  editingMemberId = id; currentPhotoData = m.photo;
+  document.getElementById('memberFormTitle').textContent = 'Modifier le membre';
+  document.getElementById('mName').value = m.name;
+  document.getElementById('mPhone').value = m.phone || '';
+  document.getElementById('mAddress').value = m.address || '';
+  document.getElementById('mProfession').value = m.profession || '';
+  document.getElementById('mPhotoPreview').innerHTML = m.photo ? `<img src="${m.photo}" style="width:100%;height:100%;object-fit:cover;">` : 'Photo';
+  document.getElementById('memberForm').style.display = 'block';
+  document.getElementById('memberForm').scrollIntoView({behavior:'smooth'});
+}
+
+function deleteMember(id){
+  if(!confirm('Supprimer ce membre et son historique ?')) return;
+  members = members.filter(m=>m.id!==id);
+  cotisations = cotisations.filter(c=>c.memberId!==id);
+  persist(); renderAll();
+  toast('Membre supprimé.', 'info');
+}
+
+/* =====================================================
+   COTISATIONS
+===================================================== */
+function addCotisation(){
+  const memberId = parseInt(document.getElementById('cMember').value);
+  const montant = parseFloat(document.getElementById('cMontant').value);
+  const date = document.getElementById('cDate').value || new Date().toISOString().slice(0,10);
+  const statut = document.getElementById('cStatut').value;
+  if(!memberId || !montant) return toast('Membre et montant obligatoires.', 'error');
+  cotisations.push({ id:nextCotisId++, memberId, montant, date, statut, receiptNo:genReceiptNo() });
+  document.getElementById('cMontant').value='';
+  toggleForm('cotisForm');
+  persist(); renderAll();
+  toast('Versement enregistré.', 'success');
+}
+
+function deleteCotisation(id){
+  if(!confirm('Supprimer ce versement ?')) return;
+  cotisations = cotisations.filter(c=>c.id!==id);
+  persist(); renderAll();
+  toast('Versement supprimé.', 'info');
+}
+
+/* =====================================================
+   RECU / PROFIL
+===================================================== */
+function openReceipt(cotisId){
+  const c = cotisations.find(x=>x.id===cotisId); if(!c) return;
+  document.getElementById('rTontineName').textContent = `Reçu de versement — Tontine « ${settings.name} »`;
+  document.getElementById('rReceipt').textContent = c.receiptNo || '—';
+  document.getElementById('rMember').textContent = memberName(c.memberId);
+  document.getElementById('rDate').textContent = c.date;
+  document.getElementById('rStatut').textContent = c.statut==='paid' ? 'À jour' : 'En retard';
+  document.getElementById('rMontant').textContent = fmt(c.montant);
+  document.getElementById('receiptModal').classList.add('open');
+}
+
+function openProfile(memberId){
+  const m = members.find(x=>x.id===memberId); if(!m) return;
+  activeProfileId = memberId;
+  document.getElementById('pfAvatar').innerHTML = m.photo ? `<img src="${m.photo}">` : initials(m.name);
+  document.getElementById('pfName').textContent = m.name;
+  document.getElementById('pfProfession').textContent = m.profession || 'Profession non renseignée';
+  document.getElementById('pfPhone').textContent = m.phone || '—';
+  document.getElementById('pfAddress').textContent = m.address || '—';
+  document.getElementById('pfJoined').textContent = m.joined;
+  const mc = cotisations.filter(c=>c.memberId===memberId).sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('pfTotal').textContent = fmt(mc.reduce((s,c)=>s+c.montant,0));
+  document.getElementById('pfHistory').innerHTML = mc.map(c=>`
+    <tr><td class="mono">${c.date}</td><td class="mono">${fmt(c.montant)}</td>
+    <td><span class="stamp ${c.statut==='paid'?'paid':'late'}">${c.statut==='paid'?'PAYÉ':'RETARD'}</span></td></tr>
+  `).join('') || `<tr><td colspan="3" class="empty">Aucun versement</td></tr>`;
+  document.getElementById('profileModal').classList.add('open');
+}
+function editMemberFromProfile(){ closeModal('profileModal'); switchTab('membres'); editMember(activeProfileId); }
+function deleteMemberFromProfile(){ closeModal('profileModal'); deleteMember(activeProfileId); }
+
+/* =====================================================
+   PARAMETRES
+===================================================== */
+function saveSettings(){
+  settings.name = document.getElementById('pName').value.trim() || 'Ma tontine';
+  settings.freq = document.getElementById('pFreq').value;
+  settings.montantStd = parseFloat(document.getElementById('pMontantStd').value)||0;
+  settings.jourEcheance = document.getElementById('pJourEcheance').value.trim();
+  settings.penTaux = parseFloat(document.getElementById('pPenTaux').value)||0;
+  settings.responsable = document.getElementById('pResponsable').value.trim();
+  persist(); refreshUserUI(); renderAll();
+  toast('Paramètres enregistrés.', 'success');
+}
+
+/* =====================================================
+   EXPORT / IMPORT
+===================================================== */
+function exportCSV(){
+  const rows = [['Membre','Total verse','Penalites','Retards']];
+  members.forEach(m=>{
+    const mc = cotisations.filter(c=>c.memberId===m.id);
+    const late = mc.filter(c=>c.statut==='late').length;
+    rows.push([m.name, mc.reduce((s,c)=>s+c.montant,0), late*settings.penTaux, late]);
+  });
+  const csv = rows.map(r=>r.join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'rapport-' + settings.name.replace(/\s+/g,'-') + '.csv'; a.click();
+  toast('Rapport CSV téléchargé.', 'success');
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify({members,cotisations,settings,user:{name:currentUser.name,email:currentUser.email,org:currentUser.org,plan:currentUser.plan}},null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'caisseplus-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  toast('Sauvegarde téléchargée.', 'success');
+}
+
+function importJSON(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try{
+      const d = JSON.parse(e.target.result);
+      if(!d.members || !Array.isArray(d.members)) throw new Error('Format invalide');
+      members = d.members;
+      cotisations = d.cotisations || [];
+      settings = Object.assign(settings, d.settings || {});
+      nextMemberId = Math.max(...members.map(m=>m.id||0), 0) + 1;
+      nextCotisId = Math.max(...cotisations.map(c=>c.id||0), 0) + 1;
+      persist(); refreshUserUI(); renderAll();
+      toast('Données restaurées.', 'success');
+    }catch(err){ toast('Fichier invalide.', 'error'); }
+    ev.target.value='';
+  };
+  r.readAsText(file);
+}
+
+/* =====================================================
+   RENDER PRINCIPAL
+===================================================== */
+function renderAll(){
+  const penTaux = settings.penTaux;
+  const total = cotisations.reduce((s,c)=>s+c.montant,0);
+  const lateC = cotisations.filter(c=>c.statut==='late');
+  const totalPen = lateC.length * penTaux;
+
+  document.getElementById('tontineNameSub').textContent = `Tontine « ${settings.name} »`;
+  document.getElementById('dashSub').textContent = `Tontine « ${settings.name} » — cycle ${settings.freq==='hebdo'?'hebdomadaire':settings.freq==='trimestriel'?'trimestriel':'mensuel'}`;
+  document.getElementById('caisseTotal').textContent = fmt(total);
+  document.getElementById('cardMembres').textContent = members.length;
+  document.getElementById('cardCaisse').textContent = fmt(total);
+  document.getElementById('cardRetard').textContent = lateC.length;
+  document.getElementById('cardPenalites').textContent = fmt(totalPen);
+  document.getElementById('penTauxDisplay').textContent = fmt(penTaux);
+  document.getElementById('penTotalDisplay').textContent = fmt(totalPen);
+
+  // recent
+  const recent = [...cotisations].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  document.getElementById('recentBody').innerHTML = recent.map(c=>`
+    <tr>
+      <td><div class="row-name"><div class="avatar-mini">${avatarHTML(members.find(m=>m.id===c.memberId))}</div>${memberName(c.memberId)}</div></td>
+      <td class="mono">${c.date}</td><td class="mono">${fmt(c.montant)}</td>
+      <td><span class="stamp ${c.statut==='paid'?'paid':'late'}">${c.statut==='paid'?'PAYÉ':'RETARD'}</span></td>
+      <td><button class="btn ghost sm" onclick="openReceipt(${c.id})">Reçu</button></td>
+    </tr>`).join('') || `<tr><td colspan="5" class="empty">Aucun versement</td></tr>`;
+
+  // membres
+  const q = (document.getElementById('memberSearch')?.value||'').toLowerCase();
+  const filtered = members.filter(m=>m.name.toLowerCase().includes(q) || (m.address||'').toLowerCase().includes(q));
+  document.getElementById('membresBody').innerHTML = filtered.map(m=>{
+    const t = cotisations.filter(c=>c.memberId===m.id).reduce((s,c)=>s+c.montant,0);
+    const hasLate = cotisations.some(c=>c.memberId===m.id && c.statut==='late');
+    return `<tr class="clickable" onclick="openProfile(${m.id})">
+      <td><div class="row-name"><div class="avatar-mini">${avatarHTML(m)}</div>${m.name}</div></td>
+      <td class="mono">${m.address||'—'}</td><td>${m.profession||'—'}</td>
+      <td class="mono">${fmt(t)}</td>
+      <td><span class="stamp ${hasLate?'late':'paid'}">${hasLate?'RETARD':'À JOUR'}</span></td>
+      <td class="actions" onclick="event.stopPropagation()">
+        <button class="btn ghost sm icon" onclick="editMember(${m.id})">✎</button>
+        <button class="btn brick sm icon" onclick="deleteMember(${m.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="6" class="empty">Aucun membre</td></tr>`;
+
+  document.getElementById('cMember').innerHTML = members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+
+  document.getElementById('cotisBody').innerHTML = [...cotisations].sort((a,b)=>b.date.localeCompare(a.date)).map(c=>`
+    <tr>
+      <td><div class="row-name"><div class="avatar-mini">${avatarHTML(members.find(m=>m.id===c.memberId))}</div>${memberName(c.memberId)}</div></td>
+      <td class="mono">${c.date}</td><td class="mono">${fmt(c.montant)}</td>
+      <td><span class="stamp ${c.statut==='paid'?'paid':'late'}">${c.statut==='paid'?'PAYÉ':'RETARD'}</span></td>
+      <td class="actions">
+        <button class="btn ghost sm" onclick="openReceipt(${c.id})">Reçu</button>
+        <button class="btn brick sm icon" onclick="deleteCotisation(${c.id})">✕</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="5" class="empty">Aucun versement</td></tr>`;
+
+  document.getElementById('penBody').innerHTML = lateC.map(c=>`
+    <tr>
+      <td><div class="row-name"><div class="avatar-mini">${avatarHTML(members.find(m=>m.id===c.memberId))}</div>${memberName(c.memberId)}</div></td>
+      <td class="mono">${c.date}</td><td class="mono">${fmt(penTaux)}</td>
+    </tr>`).join('') || `<tr><td colspan="3" class="empty">Aucun retard</td></tr>`;
+
+  document.getElementById('repTotal').textContent = fmt(total);
+  document.getElementById('repPen').textContent = fmt(totalPen);
+  document.getElementById('repCount').textContent = cotisations.length;
+  const taux = cotisations.length ? Math.round((cotisations.length-lateC.length)/cotisations.length*100) : 0;
+  document.getElementById('repTaux').textContent = taux + '%';
+
+  document.getElementById('rapBody').innerHTML = members.map(m=>{
+    const mc = cotisations.filter(c=>c.memberId===m.id);
+    const t = mc.reduce((s,c)=>s+c.montant,0);
+    const l = mc.filter(c=>c.statut==='late').length;
+    return `<tr>
+      <td><div class="row-name"><div class="avatar-mini">${avatarHTML(m)}</div>${m.name}</div></td>
+      <td class="mono">${fmt(t)}</td><td class="mono">${fmt(l*penTaux)}</td><td>${l}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="4" class="empty">Aucun membre</td></tr>`;
+}
+
+/* =====================================================
+   INIT
+===================================================== */
+document.getElementById('cDate').valueAsDate = new Date();
+(function init(){
+  const s = getSession();
+  if(s && PLANS[s.plan]){
+    currentUser = s;
+    startApp();
+  } else {
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('appShell').classList.add('hidden');
+  }
+})();
+</script>
+</body>
+</html>
